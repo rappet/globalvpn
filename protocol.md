@@ -1,5 +1,12 @@
-% Global VPN Metadata Protocol
-% Raphael Peters <rappet@rappet.de>
+---
+title: "Global VPN Metadata Protocol"
+author: "Raphael Peters <rappet@rappet.de>"
+abstract: |
+	GlobalVPN is a decentral VPN meshed sollution.
+lang: en-US
+documentclass: article
+geometry: margin=2cm
+---
 
 Introduction
 ============
@@ -49,6 +56,10 @@ Global Area
 The global area is the area in which all nodes are in.
 The global area holds public metadata, dictionary and relay nodes.
 
+Private Areas
+-------------
+
+Todo
 
 Architecture
 ============
@@ -78,9 +89,53 @@ There are multiple ways a dictionary mode can lookup such information.
 - hybrid: hold only a dictionary for current area, proxy others
 
 ### Relay node
+Basic nodes who can't be reached directly over IP can use a relay node which
+proxies packets.
+NAT hole punching is used by the basic node so that the relay node can reach
+the basic node.
 
 Protocol
 ========
+There is the metadata and the packet protocol.
+Metadata is shared over a TCP connection and encrypted using the private
+key of the host to be reached.
+The packet protocol consists of UDP packets with an encrypted payload.
+The key for packet protocol is communicated over the metadata protocol.
+
+Node States
+-----------
+
+### Update metadata/dictionary nodes list
+(optional) connect to metadata node to update list of metadata/dictionary nodes.
+
+### Get reachability information
+Get information about the NAT type (similary as described in [^stun])
+From the metadata/dictionary nodes.
+
+### Register node to dictionary node.
+Open a connection to a dictionary node and set how the node can be reached.
+The dictionary node floods the reachability information to all neighbour nodes
+(Update).
+
+### Established state
+Node can communicate with other nodes an can be reached globally.
+
+### Close
+Node floods a toombstone update packet and closes connections.
+
+Protocol States
+---------------
+
+Encryption Initialization:
+
+- Send packet with own public key information (both sides)
+- Receive packet with foreign public key information
+- Send encrypted symmetric key to other side.
+
+Basic Initialization:
+
+- Send node types.
+- Do stuff
 
 Packet
 ------

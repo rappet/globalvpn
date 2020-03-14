@@ -59,7 +59,7 @@ The global area holds public metadata, dictionary and relay nodes.
 Private Areas
 -------------
 
-Todo
+_TODO_
 
 Architecture
 ============
@@ -74,7 +74,7 @@ All nodes are also basic nodes.
 ### Metadata node
 Has list with other metadata nodes.
 Can close connection after providing list of other metadata nodes
-(used for nodes which are confured in basic information to bootstrap
+(used for nodes which are configured to provide basic information to bootstrap
 access to the network).
 Returns also a list with dictionary nodes.
 
@@ -128,8 +128,8 @@ Protocol States
 
 Encryption Initialization:
 
-- Send packet with own public key information (both sides)
-- Receive packet with foreign public key information
+- Send packet with own public signing key information (both sides) + signed
+  public encryption key
 - Send encrypted symmetric key to other side.
 
 Basic Initialization:

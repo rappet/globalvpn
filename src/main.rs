@@ -1,3 +1,9 @@
+use log::{info, warn};
+
+mod protocol;
+
 fn main() {
-    println!("Hello, world!");
+    env_logger::init();
+
+    info!("Hello, world!");
 }

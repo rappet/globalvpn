@@ -109,14 +109,14 @@ Packet
 This section describes the encoding of the packets and structure of initial
 defined packet types.
 
-Format
+Frame
 ------
 
-Type  Name        Comment
------ ----------- -----------------------
-u16   Length      describes payload length
-u8    Packet Type
-bytes Payload
+| Type  | Name        | Comment                  |
+| ----- | ----------- | ------------------------ |
+| u16   | Length      | describes payload length |
+| u8    | Packet Type |                          |
+| bytes | Payload     |                          |
 
 The type must be defined in a specification.
 Implementation specific packet types can be added via custom packet type.
@@ -124,31 +124,31 @@ A packet payload should not be larger than 65536 bytes.
 
 ### Packet types
 
-Typeid Name
------- ----
-0x01   OPEN
-0x02   UPDATE
-0x03   ERROR
-0x04   KEEPALIVE
-0x05   CUSTOM
+| Typeid | Name      |
+| ------ | ----      |
+| 0x01   | OPEN      |
+| 0x02   | UPDATE    |
+| 0x03   | ERROR     |
+| 0x04   | KEEPALIVE |
+| 0x05   | CUSTOM    |
 
 ### Open Packet
 
-Type Name
----- -------
-u8   Version
-u8   Optional Parameters Count
-~    Optional Parameters
+| Type | Name                      |
+| ---- | ------------------------- |
+| u8   | Version                   |
+| u8   | Optional Parameters Count |
+| ~    | Optional Parameters       |
 
 ### Update Packet
 
 ### Error Packet
 
-Type  Name         
------ -------------
-u8    Error code    
-u8    Error subcode 
-bytes Data
+| Type  | Name          |
+| ----- | ------------- |
+| u8    | Error code    |
+| u8    | Error subcode |
+| bytes | Data          |
 
 ### Keepalive Packet
 
@@ -157,10 +157,10 @@ bytes Data
 To allow custom additions to the protocol,
 it is possible to add custom packet types without adding them to the standard.
 
-Type Name
----- ---------
-u32  Vendor ID
-u16  subtype
+| Type | Name      |
+| ---- | --------- |
+| u32  | Vendor ID |
+| u16  | subtype   |
 
 The vendor ID should be randomly choosen and be published.[^1]
 If a vendor ID is allready in use, it should not be reused by

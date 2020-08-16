@@ -1,0 +1,115 @@
+use bytes::Bytes;
+use serde::export::fmt::Display;
+use serde::export::Formatter;
+use sodiumoxide::crypto::{kx, sign};
+use std::convert::TryFrom;
+use std::borrow::Borrow;
+
+pub struct SessionHandshake {
+    supported_protocols: Vec<CryptoProtocol>,
+    sodium_extra: Option<SessionHandshakeSodiumExtraData>,
+}
+
+pub enum CryptoProtocol {
+    Sodium,
+    Unknown(u8),
+}
+
+impl CryptoProtocol {
+    pub fn is_unknown(&self) -> bool {
+        match self {
+            CryptoProtocol::Unknown(_) => true,
+            _ => false,
+        }
+    }
+}
+
+pub struct SessionHandshakeSodiumExtraData {
+    signing_pk: sign::PublicKey,
+    // libsodium kx publickey
+    session_pk: kx::PublicKey,
+}
+
+impl SessionHandshakeSodiumExtraData {
+    fn new(signing_pk: &sign::PublicKey, session_pk: kx::PublicKey) -> SessionHandshakeSodiumExtraData{
+        SessionHandshakeSodiumExtraData {
+            signing_pk: signing_pk.clone(),
+            session_pk: session_pk.clone(),
+        }
+    }
+
+    fn sign_and_serialize(&self, secret: &sign::SecretKey) -> Vec<u8> {
+        let mut out = Vec::with_capacity(sign::PUBLICKEYBYTES + sign::SIGNATUREBYTES + kx::PUBLICKEYBYTES);
+        out.append(&mut Vec::from(self.signing_pk.as_ref()));
+
+        let mut signed_pk = sign::sign(self.session_pk.as_ref(), secret);
+        out.append(&mut signed_pk);
+
+        out
+    }
+}
+
+impl TryFrom<&[u8]> for SessionHandshakeSodiumExtraData {
+    type Error = HandshakeError;
+
+    fn try_from(value: &[u8]) -> HandshakeResult<Self> {
+        if sign::PUBLICKEYBYTES + sign::SIGNATUREBYTES + kx::PUBLICKEYBYTES > value.len() {
+            Err(HandshakeError::SodiumExtraDataToShort)
+        } else {
+            let signing_key_bytes = &value[0..sign::PUBLICKEYBYTES];
+            let signed_public_key = &value[sign::PUBLICKEYBYTES..];
+
+            let public_signing_key =
+                sign::PublicKey::from_slice(signing_key_bytes).ok_or(HandshakeError::InvalidData)?;
+            let public_key_bytes = sign::verify(signed_public_key, &public_signing_key)
+                .map_err(|_| HandshakeError::WrongSignature)?;
+            let public_session_key =
+                kx::PublicKey::from_slice(&public_key_bytes).ok_or(HandshakeError::InvalidData)?;
+            Ok(SessionHandshakeSodiumExtraData {
+                signing_pk: public_signing_key,
+                session_pk: public_session_key,
+            })
+        }
+    }
+}
+
+pub type HandshakeResult<T> = Result<T, HandshakeError>;
+
+#[derive(Debug, Copy, Clone)]
+pub enum HandshakeError {
+    WrongSignature,
+    InvalidData,
+    SodiumExtraDataToShort,
+}
+
+impl Display for HandshakeError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                HandshakeError::WrongSignature => "signature check failed",
+                HandshakeError::InvalidData => "invalid data",
+                HandshakeError::SodiumExtraDataToShort => "sodium extra data in handshake is to short",
+            }
+        )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::protocol::handshake::SessionHandshakeSodiumExtraData;
+    use sodiumoxide::crypto::{kx, sign};
+    use std::convert::TryFrom;
+
+    #[test]
+    pub fn sodium_extra_data() {
+        let (sign_pk, sign_sk) = sign::gen_keypair();
+        let (kx_pk, kx_sk) = kx::gen_keypair();
+
+        let extra = SessionHandshakeSodiumExtraData::new(&sign_pk, kx_pk);
+        let mut signed = extra.sign_and_serialize(&sign_sk);
+
+        SessionHandshakeSodiumExtraData::try_from(signed.as_slice()).unwrap();
+    }
+}

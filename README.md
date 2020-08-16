@@ -2,4 +2,4 @@
 
 ## Protocol documentation
 
-See under [protocol documentation](protocol.md)
+See under [protocol documentation](src/protocol/protocol.md)

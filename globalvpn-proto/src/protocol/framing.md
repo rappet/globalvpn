@@ -1,5 +1,7 @@
-Crypto Handshake
+Session Handshake
 ----------------
+
+Used to establish a cryptographic connection.
 
 Both sides:
 Send handshake packet.
@@ -16,26 +18,24 @@ Send handshake packet.
 
 Each data field is prepended in a header which describes its type and length.
 
-| Type  | Content                |
-| ----- | ---------------------- |
-| u16   | id of additional field |
-| u16   | len of field           |
-| `len` | content of field       |
+| Type  | Content                     |
+| ----- | --------------------------- |
+| u16   | id type of additional field |
+| u16   | len of field                |
+| `len` | content of field            |
 
-#### node NaCl public signing key (ID 1)
+#### Sodium extra data (ID 1)
 
 Public key, crypto_sign_PUBLICKEYBYTES bytes long
 
-#### public session key (ID 2)
-
-Public session key, signed using
+crypto kx sessionkey. signed using
 
 ```c
 crypto_sign(signed_key, &signed_key_len,
 signing_key, &sizeof(signing_key), sk);
 ```
 
-### NaCl key exchange (protocol 1)
+### Sodium key exchange (protocol 1)
 
 - Send own public signing key information (both sides) + signed
 public encryption key with extension 1 and 2

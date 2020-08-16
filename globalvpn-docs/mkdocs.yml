@@ -1,0 +1,10 @@
+site_name: GlobalVPN Docs
+theme:
+  name: material
+nav:
+  - index.md
+  - architecture.md
+  - framing.md
+  - Packets:
+    - packets/foo.md
+  - about.md

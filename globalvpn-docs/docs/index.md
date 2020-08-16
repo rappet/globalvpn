@@ -1,12 +1,6 @@
----
-title: "Global VPN Metadata Protocol"
-author: "Raphael Peters <rappet@rappet.de>"
-abstract: |
-	GlobalVPN is a decentral VPN meshed sollution.
-lang: en-US
-documentclass: article
-geometry: margin=2cm
----
+# GlobalVPN docs
+
+This is the protocol specifications.
 
 Introduction
 ============

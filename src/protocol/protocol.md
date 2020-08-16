@@ -61,46 +61,13 @@ Private Areas
 
 _TODO_
 
-Architecture
-============
-
-Node Types
-----------
-
-### Basic node
-Connects to metadata node using encrypted TCP.
-All nodes are also basic nodes.
-
-### Metadata node
-Has list with other metadata nodes.
-Can close connection after providing list of other metadata nodes
-(used for nodes which are configured to provide basic information to bootstrap
-access to the network).
-Returns also a list with dictionary nodes.
-
-### Dictionary node
-A dictionay node responds with an address to a relay node or basic node
-if supplied with an identifier.
-There are multiple ways a dictionary mode can lookup such information.
-
-- proxy to other dictionary node
-- holding the global dictionary which is broadcasted between dictionary nodes
-- holding a partial dictionay using a distributed hash map (later)
-- hybrid: hold only a dictionary for current area, proxy others
-
-### Relay node
-Basic nodes who can't be reached directly over IP can use a relay node which
-proxies packets.
-NAT hole punching is used by the basic node so that the relay node can reach
-the basic node.
-
 Protocol
 ========
 There is the metadata and the packet protocol.
 Metadata is shared over a TCP connection and encrypted using the private
 key of the host to be reached.
 The packet protocol consists of UDP packets with an encrypted payload.
-The key for packet protocol is communicated over the metadata protocol.
+Nodes will exchange the key for the packet protocol over the metadata protocol.
 
 Node States
 -----------
@@ -118,10 +85,11 @@ The dictionary node floods the reachability information to all neighbour nodes
 (Update).
 
 ### Established state
-Node can communicate with other nodes an can be reached globally.
+Node can communicate with other nodes and can be reached globally.
 
 ### Close
-Node floods a toombstone update packet and closes connections.
+Node send network exit packet which will be flooded to all dictionary nodes and
+send to all other affected nodes.
 
 Protocol States
 ---------------
@@ -134,49 +102,6 @@ Basic Initialization:
 
 - Send node types.
 - Do stuff
-
-Crypto Handshake
-----------------
-
-Both sides:
-Send handshake packet.
-
-| Type     | Content                                                |
-| -------- | ------------------------------------------------------ |
-| u16      | Magic Number 0xf00f                                    |
-| u8       | len `n` of supported cryptography protocols            |
-| `n` x u8 | id      of supported cryptography protocol             |
-| u8       | len `m` of additional data fields                      |
-| -        | `m` [addidtional data fields](#additional-data-fields) |
-
-### Additional data fields
-
-Each data field is prepended in a header which describes its type and length.
-
-| Type  | Content                |
-| ----- | ---------------------- |
-| u16   | id of additional field |
-| u16   | len of field           |
-| `len` | content of field       |
-
-#### node NaCl public signing key (ID 1)
-
-Public key, crypto_sign_PUBLICKEYBYTES bytes long
-
-#### public session key (ID 2)
-
-Public session key, signed using
-
-```c
-crypto_sign(signed_key, &signed_key_len,
-            signing_key, &sizeof(signing_key), sk);
-```
-
-### NaCl key exchange (protocol 1)
-
-- Send own public signing key information (both sides) + signed
-  public encryption key with extension 1 and 2
-- Send encrypted symmetric key to other side.
 
 Packet
 ------

@@ -1,7 +1,6 @@
 use bytes::Bytes;
-use serde::export::fmt::Display;
-use serde::export::Formatter;
 use sodiumoxide::crypto::{kx, sign};
+use thiserror::Error;
 use std::convert::TryFrom;
 use std::borrow::Borrow;
 
@@ -75,25 +74,14 @@ impl TryFrom<&[u8]> for SessionHandshakeSodiumExtraData {
 
 pub type HandshakeResult<T> = Result<T, HandshakeError>;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Error, Debug, Clone)]
 pub enum HandshakeError {
+    #[error("Signature check failed.")]
     WrongSignature,
+    #[error("Invalid data.")]
     InvalidData,
+    #[error("libsodium extra data in handshake is to short")]
     SodiumExtraDataToShort,
-}
-
-impl Display for HandshakeError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                HandshakeError::WrongSignature => "signature check failed",
-                HandshakeError::InvalidData => "invalid data",
-                HandshakeError::SodiumExtraDataToShort => "sodium extra data in handshake is to short",
-            }
-        )
-    }
 }
 
 #[cfg(test)]

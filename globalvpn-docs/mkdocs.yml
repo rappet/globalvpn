@@ -1,6 +1,6 @@
 site_name: GlobalVPN Docs
 theme:
-  name: material
+  name: mkdocs
 nav:
   - index.md
   - architecture.md
@@ -8,3 +8,5 @@ nav:
   - Packets:
     - packets/foo.md
   - about.md
+markdown_extensions:
+  - footnotes

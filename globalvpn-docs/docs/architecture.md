@@ -9,11 +9,11 @@ Connects to metadata node using encrypted TCP.
 All nodes are also basic nodes.
 
 ### Metadata node
-Has list with other metadata nodes.
-Can close connection after providing list of other metadata nodes
-(used for nodes which are configured to provide basic information to bootstrap
-access to the network).
-Returns also a list with dictionary nodes.
+- Has list with other metadata nodes.
+- Can close connection after providing list of other metadata nodes
+  (used for nodes which are configured to provide basic information to bootstrap
+  access to the network).
+- Returns also a list with dictionary nodes.
 
 ### Dictionary node
 A dictionary node responds with an address to a relay node or basic node

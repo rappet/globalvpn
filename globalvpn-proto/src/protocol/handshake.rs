@@ -1,3 +1,22 @@
+//! Cryptographic stream handshake
+//!
+//! Currently, there is one implementation available for a handshake, which uses libsodium
+//!
+//! # Libsodium handshake
+//!
+//! The handshake is an 1-RTT handshake. The public keys of both partners
+//! are exchanged and used to sign the data for a key exchange.
+//!
+//! ```
+//! Initiator                                                    Acceptor
+//! ---------------------------------------------------------------------
+//! client public key
+//! signed key exchange public Key  ----->
+//!                                                     server public key
+//!                                        signed key exchange public key
+//! session data                    <---->                   session data
+//! ```
+
 use bytes::Bytes;
 use sodiumoxide::crypto::{kx, sign};
 use thiserror::Error;
@@ -23,6 +42,11 @@ impl CryptoProtocol {
     }
 }
 
+
+/// First step in libsodium handshake *client* -> *data*
+///
+/// The public key of the client and the public key of the key exchange are transmittet
+/// The public key of the key exchange is signed using the private key of the client
 pub struct SessionHandshakeSodiumExtraData {
     signing_pk: sign::PublicKey,
     // libsodium kx publickey

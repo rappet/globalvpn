@@ -2,7 +2,8 @@ use serde::{Deserialize, Serialize};
 use sodiumoxide::crypto::sign;
 use std::borrow::Borrow;
 
-/// The Key used to sign packets/encryption keys
+/// A complete keyset used to sign data originating from a node.
+/// This contains **private** information
 pub struct Signkey {
     seed: sign::Seed,
     sk: sign::SecretKey,

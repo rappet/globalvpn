@@ -10,6 +10,8 @@ extern crate bytes;
 extern crate smallvec;
 extern crate sodiumoxide;
 extern crate tokio;
+#[macro_use]
+extern crate bitflags;
 
 use log::info;
 

@@ -12,7 +12,6 @@ use bytes::Bytes;
 /// The type must be defined in a specification.
 /// Implementation specific packet types can be added via custom packet type.
 /// A packet payload should not be larger than 65536 bytes.
-
 pub struct Frame {
     packet_type: u8,
     payload: Bytes,

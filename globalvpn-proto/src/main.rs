@@ -13,6 +13,7 @@ extern crate tokio;
 #[macro_use]
 extern crate bitflags;
 extern crate rmp_serde;
+extern crate toml;
 
 use log::{info, LevelFilter};
 use crate::protocol::reachability::ReachabilityInformation;

@@ -12,14 +12,26 @@ extern crate sodiumoxide;
 extern crate tokio;
 #[macro_use]
 extern crate bitflags;
+extern crate rmp_serde;
 
-use log::info;
+use log::{info, LevelFilter};
+use crate::protocol::reachability::ReachabilityInformation;
+use std::net::SocketAddrV4;
 
 mod data;
 mod protocol;
+mod prelude;
 
 fn main() {
-    env_logger::init();
+    env_logger::builder().filter_level(LevelFilter::Info).init();
+
+    let reachability = ReachabilityInformation {
+        ipv4: Some("217.230.92.35:1337".parse().unwrap()),
+        ipv6: Some("[2003:f9:8f02:100:52a1:d555:d19f:9549]:1337".parse().unwrap()),
+        proxy: None
+    };
+
+    info!("Reachability: {:?}", reachability.encode());
 
     info!("Hello, world!");
 }

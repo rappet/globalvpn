@@ -1,28 +1,38 @@
 use crate::protocol::NodeId;
-use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6};
+use std::net::{SocketAddrV4, SocketAddrV6};
+
+use crate::prelude::*;
 
 /// All reachability information about a specific node stored
 /// in the public node directory.
 ///
 /// Additional information can get accessed using secondary directories or asking the node itself
+#[derive(Serialize, Deserialize)]
 #[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub struct ReachabilityInformation {
-    flags: NodeFlags,
     /// Public IPv4 address to connect to the metadata channel of the node
-    ipv4: Option<SocketAddrV4>,
+    pub ipv4: Option<SocketAddrV4>,
     /// Public IPv6 address to connect to the metadata channel of the node
-    ipv6: Option<SocketAddrV6>,
+    pub ipv6: Option<SocketAddrV6>,
     /// [NodeId](crate::protocol::NodeId) of the proxy node used by the node
-    proxy: Option<NodeId>,
+    pub proxy: Option<NodeId>,
+    // /// Flags of a node
+    //pub flags: NodeFlags,
+}
+
+impl ReachabilityInformation {
+    pub fn encode(&self) -> Vec<u8> {
+        rmp_serde::encode::to_vec(self).expect("cannot encode reachability information")
+    }
 }
 
 bitflags! {
     struct NodeFlags: u32 {
         /// Node is part of the distributed dictionary
-        const Dictionary = 0x01;
+        const DICTIONARY = 0x01;
         /// Node will proxy metadata
-        const Metadata = 0x02;
+        const METADATA = 0x02;
         /// Node will proxy datapackets
-        const Proxy = 0x04;
+        const PROXY = 0x04;
     }
 }

@@ -1,4 +1,3 @@
-#[macro_use]
 extern crate log;
 extern crate env_logger;
 extern crate thiserror;
@@ -17,7 +16,6 @@ extern crate toml;
 
 use log::{info, LevelFilter};
 use crate::protocol::reachability::ReachabilityInformation;
-use std::net::SocketAddrV4;
 
 mod data;
 mod protocol;

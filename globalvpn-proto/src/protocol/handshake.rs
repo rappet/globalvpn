@@ -60,11 +60,9 @@
 //! public encryption key with extension 1 and 2
 //! - Send encrypted symmetric key to other side.
 
-use bytes::Bytes;
 use sodiumoxide::crypto::{kx, sign};
 use thiserror::Error;
 use std::convert::TryFrom;
-use std::borrow::Borrow;
 
 pub struct SessionHandshake {
     supported_protocols: Vec<CryptoProtocol>,
@@ -78,10 +76,7 @@ pub enum CryptoProtocol {
 
 impl CryptoProtocol {
     pub fn is_unknown(&self) -> bool {
-        match self {
-            CryptoProtocol::Unknown(_) => true,
-            _ => false,
-        }
+        matches!(self, CryptoProtocol::Unknown(_))
     }
 }
 
@@ -99,8 +94,8 @@ pub struct SessionHandshakeSodiumExtraData {
 impl SessionHandshakeSodiumExtraData {
     fn new(signing_pk: &sign::PublicKey, session_pk: kx::PublicKey) -> SessionHandshakeSodiumExtraData{
         SessionHandshakeSodiumExtraData {
-            signing_pk: signing_pk.clone(),
-            session_pk: session_pk.clone(),
+            signing_pk: *signing_pk,
+            session_pk: session_pk,
         }
     }
 

@@ -1,5 +1,5 @@
 use crate::protocol::NodeId;
-use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6};
+use std::net::{SocketAddrV4, SocketAddrV6};
 
 use crate::prelude::*;
 
@@ -29,10 +29,10 @@ impl ReachabilityInformation {
 bitflags! {
     struct NodeFlags: u32 {
         /// Node is part of the distributed dictionary
-        const Dictionary = 0x01;
+        const DICTIONARY = 0x01;
         /// Node will proxy metadata
-        const Metadata = 0x02;
+        const METADATA = 0x02;
         /// Node will proxy datapackets
-        const Proxy = 0x04;
+        const PROXY = 0x04;
     }
 }

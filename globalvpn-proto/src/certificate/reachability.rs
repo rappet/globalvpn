@@ -139,12 +139,31 @@ impl BERDecodable for NodeProxyReachability {
 
 #[cfg(test)]
 mod tests {
-    use crate::certificate::{NodeIpReachability, NodeProxyReachability};
+    use crate::certificate::{NodeIpReachability, NodeProxyReachability, NodeReachabilityInformation};
     use std::collections::BTreeSet;
 
     #[test]
     fn test_encode_decode_node_reachability_information() {
-
+        let testvec = vec![
+            NodeReachabilityInformation {
+                network_reachability:vec![
+                    NodeIpReachability {
+                        address: "127.0.0.1".parse().unwrap(),
+                        quic_port: Some(1337),
+                    },
+                    NodeIpReachability {
+                        address: "2a0e:46c6::2".parse().unwrap(),
+                        quic_port: Some(1337),
+                    },
+                ].into_iter().collect(),
+                proxy_reachability: vec![
+                    NodeProxyReachability {
+                        proxy_address: vec![123, 34, 34, 212, 43, 93],
+                        proxy_reachability: BTreeSet::new(),
+                    },
+                ].into_iter().collect(),
+            }
+        ];
     }
 
     #[test]

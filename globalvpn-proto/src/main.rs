@@ -13,30 +13,50 @@ extern crate tokio;
 extern crate bitflags;
 extern crate rmp_serde;
 extern crate toml;
-extern crate der;
+extern crate yasna;
 
-use crate::protocol::reachability::ReachabilityInformation;
 use log::{info, LevelFilter};
+use crate::certificate::{NodeIpReachability, NodeReachabilityInformation, NodeProxyReachability};
+use std::fs::File;
+use std::io::Write;
+use std::collections::BTreeSet;
 
 pub mod certificate;
 mod data;
 mod prelude;
 mod protocol;
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     env_logger::builder().filter_level(LevelFilter::Info).init();
 
-    let reachability = ReachabilityInformation {
-        ipv4: Some("217.230.92.35:1337".parse().unwrap()),
-        ipv6: Some(
-            "[2003:f9:8f02:100:52a1:d555:d19f:9549]:1337"
-                .parse()
-                .unwrap(),
-        ),
-        proxy: None,
+    let reachability = NodeReachabilityInformation {
+        network_reachability: vec![
+            NodeIpReachability {
+                address: "127.0.0.1".parse().unwrap(),
+                quic_port: Some(1337),
+            },
+            NodeIpReachability {
+                address: "2a0e:46c6::2".parse().unwrap(),
+                quic_port: Some(1337),
+            },
+        ].into_iter().collect(),
+        proxy_reachability: vec![
+            NodeProxyReachability {
+                proxy_address: vec![123, 34, 34, 212, 43, 93],
+                proxy_reachability: BTreeSet::new(),
+            },
+        ].into_iter().collect(),
     };
 
-    info!("Reachability: {:?}", reachability.encode());
+    let mut out = File::create("out.der")?;
+    let der = yasna::encode_der(&reachability);
+    out.write_all(der.as_slice())?;
+    drop(out);
+
+    let decoded: NodeReachabilityInformation = yasna::decode_ber(&der)?;
+    assert_eq!(reachability, decoded);
+
 
     info!("Hello, world!");
+    Ok(())
 }

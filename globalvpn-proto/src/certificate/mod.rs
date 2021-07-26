@@ -31,18 +31,18 @@
 //! NodeReachability DEFINITIONS ::= BEGIN
 //!
 //!     NodeReachabilityInformation ::= SEQUENCE {
-//!         networkReachability [0] EXPLICIT SEQUENCE OF SingleNodeReachability,
-//!         proxyReachability   [1] EXPLICIT SEQUENCE OF OCTET STRING
+//!         networkReachability SET OF SingleNodeReachability,
+//!         proxyReachability  SET OF OCTET STRING
 //!     }
 //!
 //!     NodeIpReachability ::= SEQUENCE {
 //!         address         UTF8String,
-//!         quicPort    [0] EXPLICIT INTEGER
+//!         quicPort    [0] EXPLICIT INTEGER OPTIONAL
 //!     }
 //!
 //!     NodeProxyReachability ::= SEQUENCE {
 //!         proxyAddress            OCTET STRING
-//!         proxyReachability   [0] EXPLICIT SEQUENCE OF NodeIpReachability
+//!         proxyReachability   [0] EXPLICIT SET OF NodeIpReachability
 //!     }
 //! END
 //! ```

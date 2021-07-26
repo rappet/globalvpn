@@ -15,11 +15,11 @@ extern crate rmp_serde;
 extern crate toml;
 extern crate yasna;
 
+use crate::certificate::{NodeIpReachability, NodeProxyReachability, NodeReachabilityInformation};
 use log::{info, LevelFilter};
-use crate::certificate::{NodeIpReachability, NodeReachabilityInformation, NodeProxyReachability};
+use std::collections::BTreeSet;
 use std::fs::File;
 use std::io::Write;
-use std::collections::BTreeSet;
 
 pub mod certificate;
 mod data;
@@ -39,13 +39,15 @@ fn main() -> anyhow::Result<()> {
                 address: "2a0e:46c6::2".parse().unwrap(),
                 quic_port: Some(1337),
             },
-        ].into_iter().collect(),
-        proxy_reachability: vec![
-            NodeProxyReachability {
-                proxy_address: vec![123, 34, 34, 212, 43, 93],
-                proxy_reachability: BTreeSet::new(),
-            },
-        ].into_iter().collect(),
+        ]
+        .into_iter()
+        .collect(),
+        proxy_reachability: vec![NodeProxyReachability {
+            proxy_address: vec![123, 34, 34, 212, 43, 93],
+            proxy_reachability: BTreeSet::new(),
+        }]
+        .into_iter()
+        .collect(),
     };
 
     let mut out = File::create("out.der")?;
@@ -55,7 +57,6 @@ fn main() -> anyhow::Result<()> {
 
     let decoded: NodeReachabilityInformation = yasna::decode_ber(&der)?;
     assert_eq!(reachability, decoded);
-
 
     info!("Hello, world!");
     Ok(())

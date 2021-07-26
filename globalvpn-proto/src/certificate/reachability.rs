@@ -1,7 +1,9 @@
-use std::net::IpAddr;
-use yasna::{DEREncodable, DERWriter, Tag, BERDecodable, ASN1Result, BERReader, ASN1Error, ASN1ErrorKind};
 use crate::certificate::OID_GLOBALVPN_X509_REACHABILITY;
 use std::collections::BTreeSet;
+use std::net::IpAddr;
+use yasna::{
+    ASN1Error, ASN1ErrorKind, ASN1Result, BERDecodable, BERReader, DEREncodable, DERWriter, Tag,
+};
 
 /// Complete reachability information for a node
 #[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Default)]
@@ -32,12 +34,16 @@ impl DEREncodable for NodeReachabilityInformation {
 impl BERDecodable for NodeReachabilityInformation {
     fn decode_ber(reader: BERReader) -> ASN1Result<Self> {
         reader.read_sequence(|reader| {
-            let network_reachability = reader.next().collect_set_of(|reader| {
-                NodeIpReachability::decode_ber(reader)
-            })?.into_iter().collect();
-            let proxy_reachability = reader.next().collect_set_of(|reader| {
-                NodeProxyReachability::decode_ber(reader)
-            })?.into_iter().collect();
+            let network_reachability = reader
+                .next()
+                .collect_set_of(|reader| NodeIpReachability::decode_ber(reader))?
+                .into_iter()
+                .collect();
+            let proxy_reachability = reader
+                .next()
+                .collect_set_of(|reader| NodeProxyReachability::decode_ber(reader))?
+                .into_iter()
+                .collect();
             Ok(NodeReachabilityInformation {
                 network_reachability,
                 proxy_reachability,
@@ -58,7 +64,9 @@ pub struct NodeIpReachability {
 impl DEREncodable for NodeIpReachability {
     fn encode_der(&self, writer: DERWriter) {
         writer.write_sequence(|writer| {
-            writer.next().write_utf8_string(self.address.to_string().as_str());
+            writer
+                .next()
+                .write_utf8_string(self.address.to_string().as_str());
             if let Some(quic_port) = self.quic_port {
                 writer.next().write_tagged(Tag::context(0), |writer| {
                     writer.write_u16(quic_port);
@@ -72,21 +80,15 @@ impl BERDecodable for NodeIpReachability {
     fn decode_ber(reader: BERReader) -> ASN1Result<Self> {
         reader.read_sequence(|reader| {
             let address_str = reader.next().read_utf8string()?;
-            let address = address_str.parse().map_err(|_err| {
-                ASN1Error::new(ASN1ErrorKind::Invalid)
-            })?;
+            let address = address_str
+                .parse()
+                .map_err(|_err| ASN1Error::new(ASN1ErrorKind::Invalid))?;
 
             let quic_port = reader.read_optional(|reader| {
-                reader.read_tagged(
-                    Tag::context(0),
-                    |reader| reader.read_u16(),
-                )
+                reader.read_tagged(Tag::context(0), |reader| reader.read_u16())
             })?;
 
-            Ok(NodeIpReachability {
-                address,
-                quic_port,
-            })
+            Ok(NodeIpReachability { address, quic_port })
         })
     }
 }
@@ -121,13 +123,16 @@ impl BERDecodable for NodeProxyReachability {
     fn decode_ber(reader: BERReader) -> ASN1Result<Self> {
         reader.read_sequence(|reader| {
             let proxy_address = reader.next().read_bytes()?;
-            let proxy_reachability = reader.read_optional(|reader| {
-                reader.read_tagged(Tag::context(0), |reader| {
-                    Ok(reader.collect_set_of(|reader| {
-                        NodeIpReachability::decode_ber(reader)
-                    })?.into_iter().collect())
-                })
-            })?.unwrap_or_else(|| BTreeSet::new());
+            let proxy_reachability = reader
+                .read_optional(|reader| {
+                    reader.read_tagged(Tag::context(0), |reader| {
+                        Ok(reader
+                            .collect_set_of(|reader| NodeIpReachability::decode_ber(reader))?
+                            .into_iter()
+                            .collect())
+                    })
+                })?
+                .unwrap_or_else(|| BTreeSet::new());
             Ok(NodeProxyReachability {
                 proxy_address,
                 proxy_reachability,
@@ -136,34 +141,35 @@ impl BERDecodable for NodeProxyReachability {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::certificate::{NodeIpReachability, NodeProxyReachability, NodeReachabilityInformation};
+    use crate::certificate::{
+        NodeIpReachability, NodeProxyReachability, NodeReachabilityInformation,
+    };
     use std::collections::BTreeSet;
 
     #[test]
     fn test_encode_decode_node_reachability_information() {
-        let testvec = vec![
-            NodeReachabilityInformation {
-                network_reachability:vec![
-                    NodeIpReachability {
-                        address: "127.0.0.1".parse().unwrap(),
-                        quic_port: Some(1337),
-                    },
-                    NodeIpReachability {
-                        address: "2a0e:46c6::2".parse().unwrap(),
-                        quic_port: Some(1337),
-                    },
-                ].into_iter().collect(),
-                proxy_reachability: vec![
-                    NodeProxyReachability {
-                        proxy_address: vec![123, 34, 34, 212, 43, 93],
-                        proxy_reachability: BTreeSet::new(),
-                    },
-                ].into_iter().collect(),
-            }
-        ];
+        let testvec = vec![NodeReachabilityInformation {
+            network_reachability: vec![
+                NodeIpReachability {
+                    address: "127.0.0.1".parse().unwrap(),
+                    quic_port: Some(1337),
+                },
+                NodeIpReachability {
+                    address: "2a0e:46c6::2".parse().unwrap(),
+                    quic_port: Some(1337),
+                },
+            ]
+            .into_iter()
+            .collect(),
+            proxy_reachability: vec![NodeProxyReachability {
+                proxy_address: vec![123, 34, 34, 212, 43, 93],
+                proxy_reachability: BTreeSet::new(),
+            }]
+            .into_iter()
+            .collect(),
+        }];
     }
 
     #[test]
@@ -199,12 +205,12 @@ mod tests {
             },
             NodeProxyReachability {
                 proxy_address: vec![123, 34, 54, 96, 34],
-                proxy_reachability: vec![
-                    NodeIpReachability {
-                        address: "2a0e:46c6::2".parse().unwrap(),
-                        quic_port: Some(1337),
-                    },
-                ].into_iter().collect(),
+                proxy_reachability: vec![NodeIpReachability {
+                    address: "2a0e:46c6::2".parse().unwrap(),
+                    quic_port: Some(1337),
+                }]
+                .into_iter()
+                .collect(),
             },
         ];
 

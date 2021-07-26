@@ -1,5 +1,5 @@
-use yasna::{DEREncodable, DERWriter, Tag, BERDecodable, ASN1Result, BERReader};
 use crate::certificate::NodeReachabilityInformation;
+use yasna::{ASN1Result, BERDecodable, BERReader, DEREncodable, DERWriter, Tag};
 
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct NodeMetadata {
@@ -31,18 +31,14 @@ impl BERDecodable for NodeMetadata {
     fn decode_ber(reader: BERReader) -> ASN1Result<Self> {
         reader.read_sequence(|reader| {
             let maximum_warm_table_seconds = reader.read_optional(|reader| {
-                reader.read_tagged(Tag::context(0), |reader| {
-                    reader.read_u64()
-                })
+                reader.read_tagged(Tag::context(0), |reader| reader.read_u64())
             })?;
             let maximum_cold_table_seconds = reader.read_optional(|reader| {
-                reader.read_tagged(Tag::context(1), |reader| {
-                    reader.read_u64()
-                })
+                reader.read_tagged(Tag::context(1), |reader| reader.read_u64())
             })?;
             Ok(NodeMetadata {
                 maximum_warm_table_seconds,
-                maximum_cold_table_seconds
+                maximum_cold_table_seconds,
             })
         })
     }

@@ -1,1 +1,1 @@
-pub use serde::{Serialize, Deserialize};
+pub use serde::{Deserialize, Serialize};

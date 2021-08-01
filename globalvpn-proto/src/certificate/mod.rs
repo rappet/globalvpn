@@ -66,7 +66,10 @@ mod reachability;
 pub use metadata::NodeMetadata;
 pub use reachability::{NodeIpReachability, NodeProxyReachability, NodeReachabilityInformation};
 
+use chrono::{Duration, Utc};
+use rcgen::{Certificate, CertificateParams, CustomExtension, DistinguishedName, DnType, KeyPair};
 use std::net::{SocketAddrV4, SocketAddrV6};
+use pem::Pem;
 
 pub const OID_GLOBALVPN_X509_REACHABILITY: &[u64] = &[1, 3, 6, 1, 4, 1, 57716, 2, 1, 1];
 pub const OID_GLOBALVPN_X509_METADATA: &[u64] = &[1, 3, 6, 1, 4, 1, 57716, 2, 1, 2];
@@ -173,28 +176,70 @@ impl TryFrom<&HashMap<Oid<'_>, X509Extension<'_>>> for ReachabilityInformation {
     }
 }*/
 
-/// Reachability information and other metadata
 #[derive(Debug, Clone, Eq, PartialEq)]
-#[non_exhaustive]
-pub struct GlobalvpnCertificate {
-    /// Ed25519 public key
-    public_key: Vec<u8>,
+pub struct CertificateData {
+    pub reachability: NodeReachabilityInformation,
+    pub metadata: NodeMetadata,
+}
 
-    reachability_information: ReachabilityInformation,
+impl CertificateData {
+    pub fn sign(&self, private_key_der: &[u8]) -> CertificateResult<RawCertificate> {
+        let mut params = CertificateParams::default();
+        params.alg = &rcgen::PKCS_ED25519;
+        params.not_before = Utc::today().and_hms(0, 0, 0);
+        params.not_after = (Utc::today() + Duration::days(7)).and_hms(0, 0, 0);
+        //params.key_pair =
+        //    Some(KeyPair::from_der(private_key_der).map_err(|_err| CertificateError::ParseDer)?);
+        params.distinguished_name = {
+            let mut name = DistinguishedName::new();
+            //name.push(DnType::CommonName, "globalvpn self signed node cert");
+            name
+        };
+
+        params
+            .custom_extensions
+            .push(CustomExtension::from_oid_content(
+                OID_GLOBALVPN_X509_REACHABILITY,
+                yasna::encode_der(&self.reachability),
+            ));
+        params
+            .custom_extensions
+            .push(CustomExtension::from_oid_content(
+                OID_GLOBALVPN_X509_METADATA,
+                yasna::encode_der(&self.metadata),
+            ));
+
+        let certificate = Certificate::from_params(params)
+            .map_err(|_err| CertificateError::GeneratingCertificate)?;
+        let encoded_der = certificate
+            .serialize_der()
+            .map_err(|_err| CertificateError::GeneratingCertificate)?;
+        Ok(RawCertificate { encoded_der })
+    }
+}
+
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq)]
+pub struct RawCertificate {
+    pub(crate) encoded_der: Vec<u8>,
+}
+
+impl RawCertificate {
+    pub fn der(&self) -> &[u8] {
+        self.encoded_der.as_slice()
+    }
+
+    pub fn pem(&self) -> String {
+        let pem = Pem {
+            tag: "CERTIFICATE".to_string(),
+            contents: self.encoded_der.clone()
+        };
+        pem::encode(&pem)
+    }
 }
 
 #[derive(thiserror::Error, Debug, Copy, Clone, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum CertificateError {
-    /// IPv4 reachability information is not a valid IPv4 socket address
-    #[error("malformat IPv4 socket address")]
-    InvalidIpv4ReachabilityInformation,
-    /// IPv6 reachability information is not a valid IPv6 socket address
-    #[error("malformat IPv6 socket address")]
-    InvalidIpv6ReachabilityInformation,
-    /// proxy node address is not valid
-    #[error("invalid proxy node address")]
-    InvalidProxyNode,
     /// error during certificate generation
     #[error("could not generate certificate")]
     GeneratingCertificate,

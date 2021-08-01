@@ -2,6 +2,4 @@
 
 pub mod error;
 
-pub use frame::Frame;
-
 pub use crate::data::nodeid::NodeId;

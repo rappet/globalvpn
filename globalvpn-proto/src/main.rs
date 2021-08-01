@@ -15,11 +15,12 @@ extern crate rmp_serde;
 extern crate toml;
 extern crate yasna;
 
-use crate::certificate::{NodeIpReachability, NodeProxyReachability, NodeReachabilityInformation};
+use crate::certificate::{NodeIpReachability, NodeProxyReachability, NodeReachabilityInformation, NodeMetadata, CertificateData};
 use log::{info, LevelFilter};
 use std::collections::BTreeSet;
 use std::fs::File;
 use std::io::Write;
+use ring::rand::SystemRandom;
 
 pub mod certificate;
 mod data;
@@ -50,13 +51,28 @@ fn main() -> anyhow::Result<()> {
         .collect(),
     };
 
+    let metadata = NodeMetadata {
+        maximum_warm_table_seconds: Some(2600),
+        maximum_cold_table_seconds: None,
+    };
+
+    let certificate_data = CertificateData {
+        reachability,
+        metadata
+    };
+    let mut rng = SystemRandom::new();
+    let private_key = ring::signature::Ed25519KeyPair::generate_pkcs8(&mut rng).unwrap();
+    let encoded = certificate_data.sign(private_key.as_ref())?;
+
     let mut out = File::create("out.der")?;
-    let der = yasna::encode_der(&reachability);
-    out.write_all(der.as_slice())?;
+    out.write_all(encoded.der())?;
     drop(out);
 
-    let decoded: NodeReachabilityInformation = yasna::decode_ber(&der)?;
-    assert_eq!(reachability, decoded);
+    println!("{}", encoded.pem());
+
+    let (rem, cer) = x509_parser::parse_x509_certificate(encoded.der())?;
+    let issuer_pk = &cer.tbs_certificate.subject_pki;
+    cer.verify_signature(Some(issuer_pk))?;
 
     info!("Hello, world!");
     Ok(())

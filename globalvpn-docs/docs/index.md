@@ -47,55 +47,62 @@ Areas
 Global Area
 -----------
 
-The global area is the area in which all nodes are in.
-The global area holds public metadata, dictionary and relay nodes.
+The global area contains all public listed nodes.
+Reachability information and metadata, such as if the node is a relay node,
+is stored in the global area.
 
 Private Areas
 -------------
 
-_TODO_
+> *** This is not part of the initial implementation ***
 
 Protocol
 ========
-There is the metadata and the packet protocol.
-Metadata is shared over a TCP connection and encrypted using the private
-key of the host to be reached.
-The packet protocol consists of UDP packets with an encrypted payload.
-Nodes will exchange the key for the packet protocol over the metadata protocol.
+QUIC[^quic] is used both for exchanging metadata and packets.
+Bidirectional streams transmit metadata in a request-response
+and listener style scheme.
+QUIC datagrams transmit encapsulated IP packets.
+QUIC datagrams do not retransmit missing IP packets.
+
+If two endpoints cannot communicate direclty using QUIC,
+a third node can be used as a proxy.
+A encrypted TLS session will then be initiated in of the QUIC channels
+end to end.
+
+End to end encryption of datagrams is implemented using a custom protocol.
 
 Node States
 -----------
 
-### Update metadata/dictionary nodes list
-(optional) connect to metadata node to update list of metadata/dictionary nodes.
+### Update metadata/dictionary nodes list (optional)
+Connect to metadata node to update list of metadata/dictionary nodes.
+A node uses a list of nodes stored in a file as a seed to find other nodes (cold table)
+and then requests current information of all nodes (warn table).
 
-### Get reachability information
-Get information about the NAT type (similary as described in [^stun])
-From the metadata/dictionary nodes.
+### Register node to directory node.
+A node will generate a self-signed X.509 certificate with a custom extension specifing,
+how to reach this node.
+It is also specified, that this information should be flooded with all other
+directory nodes.
+The node then send the X.509 certificate to a directory node,
+who will then flood that information to all other connected directory nodes.
 
-### Register node to dictionary node.
-Open a connection to a dictionary node and set how the node can be reached.
-The dictionary node floods the reachability information to all neighbour nodes
-(Update).
+If a directory noded receives a valid X.509 certificate about a node which is newer than the
+current stored certificate,
+it will be overwritten and flooded to all other connected directory nodes.
 
 ### Established state
 Node can communicate with other nodes and can be reached globally.
 
 ### Close
-Node send network exit packet which will be flooded to all dictionary nodes and
-send to all other affected nodes.
+A node which want to leave the network will send a new generated X.509 certificate to a
+neighbour node containing an empty list of reachability information.
+After that, it closes all connections.
 
-Protocol States
----------------
+Node State
+----------
 
-Encryption Initialization:
 
-- As described in [Crypto Handshake](#crypto-handshake)
-
-Basic Initialization:
-
-- Send node types.
-- Do stuff
 
 Packet
 ------

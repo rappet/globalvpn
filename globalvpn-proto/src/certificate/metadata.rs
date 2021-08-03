@@ -1,4 +1,3 @@
-use crate::certificate::NodeReachabilityInformation;
 use yasna::{ASN1Result, BERDecodable, BERReader, DEREncodable, DERWriter, Tag};
 
 #[derive(Debug, Clone, Eq, PartialEq, Default)]

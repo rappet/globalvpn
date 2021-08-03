@@ -67,12 +67,19 @@ pub use metadata::NodeMetadata;
 pub use reachability::{NodeIpReachability, NodeProxyReachability, NodeReachabilityInformation};
 
 use chrono::{Duration, Utc};
-use rcgen::{Certificate, CertificateParams, CustomExtension, DistinguishedName, DnType, KeyPair};
-use std::net::{SocketAddrV4, SocketAddrV6};
+use log::{error, warn};
 use pem::Pem;
+use rcgen::{Certificate, CertificateParams, CustomExtension, DistinguishedName, DnType, KeyPair};
+use std::convert::TryFrom;
+use std::net::{SocketAddrV4, SocketAddrV6};
+use x509_parser::der_parser::oid::Oid;
+use x509_parser::error::X509Error;
+use x509_parser::x509::AlgorithmIdentifier;
 
 pub const OID_GLOBALVPN_X509_REACHABILITY: &[u64] = &[1, 3, 6, 1, 4, 1, 57716, 2, 1, 1];
 pub const OID_GLOBALVPN_X509_METADATA: &[u64] = &[1, 3, 6, 1, 4, 1, 57716, 2, 1, 2];
+
+const OID_X509_ED25519: &[u64] = &[1, 3, 101, 112];
 
 /// Node reachability information
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
@@ -218,6 +225,45 @@ impl CertificateData {
     }
 }
 
+impl TryFrom<RawCertificate> for CertificateData {
+    type Error = CertificateError;
+
+    fn try_from(value: RawCertificate) -> Result<Self, Self::Error> {
+        let (_, certificate) = x509_parser::parse_x509_certificate(value.der())?;
+
+        let certificate_oid = certificate.signature_algorithm.algorithm;
+        let x509_ed25519_oid =
+            x509_parser::der_parser::oid::Oid::from(OID_X509_ED25519).expect("invalid OID");
+
+        if certificate_oid != x509_ed25519_oid {
+            return Err(CertificateError::InvalidSignatureAlgorithm);
+        }
+        // TODO check certificate
+        warn!("X.509 ceritificate verification is not implemented, until x509_parser supports Ed25519");
+
+        let extensions = certificate.tbs_certificate.extensions();
+        let reachability = yasna::decode_der(
+            extensions
+                .get(&Oid::from(OID_GLOBALVPN_X509_REACHABILITY).unwrap())
+                .ok_or(CertificateError::MissingReachabilityInformation)?
+                .value,
+        )
+            .map_err(|_err| CertificateError::DecodeReachabilityInformation)?;
+        let metadata = yasna::decode_der(
+            extensions
+                .get(&Oid::from(OID_GLOBALVPN_X509_METADATA).unwrap())
+                .ok_or(CertificateError::MissingNodeMetadata)?
+                .value,
+        )
+            .map_err(|_err| CertificateError::DecodeNodeMetadata)?;
+
+        Ok(CertificateData {
+            reachability,
+            metadata,
+        })
+    }
+}
+
 #[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub struct RawCertificate {
     pub(crate) encoded_der: Vec<u8>,
@@ -231,13 +277,13 @@ impl RawCertificate {
     pub fn pem(&self) -> String {
         let pem = Pem {
             tag: "CERTIFICATE".to_string(),
-            contents: self.encoded_der.clone()
+            contents: self.encoded_der.clone(),
         };
         pem::encode(&pem)
     }
 }
 
-#[derive(thiserror::Error, Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(thiserror::Error, Debug)]
 #[non_exhaustive]
 pub enum CertificateError {
     /// error during certificate generation
@@ -246,14 +292,75 @@ pub enum CertificateError {
     /// malformat DER private key
     #[error("private key is not a valid DER encoded key")]
     ParseDer,
+    /// invalid signature algorithm
+    #[error("certificate has invalid signature algorithm")]
+    InvalidSignatureAlgorithm,
+    /// X.509 parsing error
+    #[error("decoding X.509: {0}")]
+    X509(#[from] x509_parser::nom::Err<X509Error>),
+    /// decoding node metadata extension
+    #[error("decoding node metadata")]
+    DecodeNodeMetadata,
+    /// missing node metadata extension
+    #[error("missing node metadata")]
+    MissingNodeMetadata,
+    /// decoding node metadata extension
+    #[error("decoding reachability information")]
+    DecodeReachabilityInformation,
+    /// missing node metadata extension
+    #[error("missing reachability information")]
+    MissingReachabilityInformation,
 }
 
 pub type CertificateResult<T> = Result<T, CertificateError>;
 
 #[cfg(test)]
 mod tests {
+    use crate::certificate::{
+        CertificateData, NodeIpReachability, NodeMetadata, NodeProxyReachability,
+        NodeReachabilityInformation,
+    };
+    use ring::rand::SystemRandom;
+    use std::collections::BTreeSet;
+    use std::convert::{TryFrom, TryInto};
+
     #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+    fn roundtrip() {
+        let reachability = NodeReachabilityInformation {
+            network_reachability: vec![
+                NodeIpReachability {
+                    address: "127.0.0.1".parse().unwrap(),
+                    quic_port: Some(1337),
+                },
+                NodeIpReachability {
+                    address: "2a0e:46c6::2".parse().unwrap(),
+                    quic_port: Some(1337),
+                },
+            ]
+                .into_iter()
+                .collect(),
+            proxy_reachability: vec![NodeProxyReachability {
+                proxy_address: vec![123, 34, 34, 212, 43, 93],
+                proxy_reachability: BTreeSet::new(),
+            }]
+                .into_iter()
+                .collect(),
+        };
+
+        let metadata = NodeMetadata {
+            maximum_warm_table_seconds: Some(2600),
+            maximum_cold_table_seconds: None,
+        };
+
+        let certificate_data = CertificateData {
+            reachability,
+            metadata,
+        };
+        let mut rng = SystemRandom::new();
+        let private_key = ring::signature::Ed25519KeyPair::generate_pkcs8(&mut rng).unwrap();
+
+        let encoded = certificate_data.sign(private_key.as_ref()).unwrap();
+        let decoded: CertificateData = encoded.try_into().unwrap();
+        assert_eq!(certificate_data, decoded);
     }
 }

@@ -9,18 +9,21 @@ extern crate smallvec;
 extern crate sodiumoxide;
 extern crate thiserror;
 extern crate tokio;
-#[macro_use]
 extern crate bitflags;
 extern crate rmp_serde;
 extern crate toml;
 extern crate yasna;
 
-use crate::certificate::{NodeIpReachability, NodeProxyReachability, NodeReachabilityInformation, NodeMetadata, CertificateData};
+use crate::certificate::{
+    CertificateData, NodeIpReachability, NodeMetadata, NodeProxyReachability,
+    NodeReachabilityInformation,
+};
 use log::{info, LevelFilter};
+use ring::rand::SystemRandom;
 use std::collections::BTreeSet;
+use std::convert::TryInto;
 use std::fs::File;
 use std::io::Write;
-use ring::rand::SystemRandom;
 
 pub mod certificate;
 mod data;
@@ -58,11 +61,13 @@ fn main() -> anyhow::Result<()> {
 
     let certificate_data = CertificateData {
         reachability,
-        metadata
+        metadata,
     };
     let mut rng = SystemRandom::new();
     let private_key = ring::signature::Ed25519KeyPair::generate_pkcs8(&mut rng).unwrap();
     let encoded = certificate_data.sign(private_key.as_ref())?;
+
+    let _decoded: CertificateData = encoded.clone().try_into()?;
 
     let mut out = File::create("out.der")?;
     out.write_all(encoded.der())?;
@@ -70,7 +75,7 @@ fn main() -> anyhow::Result<()> {
 
     println!("{}", encoded.pem());
 
-    let (rem, cer) = x509_parser::parse_x509_certificate(encoded.der())?;
+    let (_rem, cer) = x509_parser::parse_x509_certificate(encoded.der())?;
     let issuer_pk = &cer.tbs_certificate.subject_pki;
     cer.verify_signature(Some(issuer_pk))?;
 

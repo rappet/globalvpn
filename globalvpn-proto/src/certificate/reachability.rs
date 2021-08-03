@@ -1,4 +1,3 @@
-use crate::certificate::OID_GLOBALVPN_X509_REACHABILITY;
 use std::collections::BTreeSet;
 use std::net::IpAddr;
 use yasna::{
@@ -36,12 +35,12 @@ impl BERDecodable for NodeReachabilityInformation {
         reader.read_sequence(|reader| {
             let network_reachability = reader
                 .next()
-                .collect_set_of(|reader| NodeIpReachability::decode_ber(reader))?
+                .collect_set_of(NodeIpReachability::decode_ber)?
                 .into_iter()
                 .collect();
             let proxy_reachability = reader
                 .next()
-                .collect_set_of(|reader| NodeProxyReachability::decode_ber(reader))?
+                .collect_set_of(NodeProxyReachability::decode_ber)?
                 .into_iter()
                 .collect();
             Ok(NodeReachabilityInformation {

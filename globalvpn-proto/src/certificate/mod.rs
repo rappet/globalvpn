@@ -69,7 +69,7 @@ pub use reachability::{NodeIpReachability, NodeProxyReachability, NodeReachabili
 use chrono::{Duration, Utc};
 use log::{error, warn};
 use pem::Pem;
-use rcgen::{Certificate, CertificateParams, CustomExtension, DistinguishedName};
+use rcgen::{Certificate, CertificateParams, CustomExtension, DistinguishedName, KeyPair, RcgenError};
 use std::convert::TryFrom;
 use std::net::{SocketAddrV4, SocketAddrV6};
 use x509_parser::der_parser::oid::Oid;
@@ -110,6 +110,7 @@ impl CertificateData {
     pub fn sign(&self, private_key_der: &[u8]) -> CertificateResult<RawCertificate> {
         let mut params = CertificateParams::default();
         params.alg = &rcgen::PKCS_ED25519;
+        params.key_pair = Some(KeyPair::from_der(private_key_der)?);
         params.not_before = Utc::today().and_hms(0, 0, 0);
         params.not_after = (Utc::today() + Duration::days(7)).and_hms(0, 0, 0);
         //params.key_pair =
@@ -227,6 +228,9 @@ pub enum CertificateError {
     /// missing node metadata extension
     #[error("missing reachability information")]
     MissingReachabilityInformation,
+    /// creating certificate
+    #[error("generating X.509 certificate: {0}")]
+    Rcgen(#[from] RcgenError),
 }
 
 pub type CertificateResult<T> = Result<T, CertificateError>;

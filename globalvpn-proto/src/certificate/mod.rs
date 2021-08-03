@@ -69,12 +69,11 @@ pub use reachability::{NodeIpReachability, NodeProxyReachability, NodeReachabili
 use chrono::{Duration, Utc};
 use log::{error, warn};
 use pem::Pem;
-use rcgen::{Certificate, CertificateParams, CustomExtension, DistinguishedName, DnType, KeyPair};
+use rcgen::{Certificate, CertificateParams, CustomExtension, DistinguishedName};
 use std::convert::TryFrom;
 use std::net::{SocketAddrV4, SocketAddrV6};
 use x509_parser::der_parser::oid::Oid;
 use x509_parser::error::X509Error;
-use x509_parser::x509::AlgorithmIdentifier;
 
 pub const OID_GLOBALVPN_X509_REACHABILITY: &[u64] = &[1, 3, 6, 1, 4, 1, 57716, 2, 1, 1];
 pub const OID_GLOBALVPN_X509_METADATA: &[u64] = &[1, 3, 6, 1, 4, 1, 57716, 2, 1, 2];
@@ -100,88 +99,6 @@ pub struct ReachabilityInformation {
     /// OID `1.3.6.1.4.1.123456.1.3`
     pub proxy_node: Option<Vec<u8>>,
 }
-
-/*impl ReachabilityInformation {
-    /// Encode reachability information as X.509 and sign them
-    pub fn sign_as_der(&self, private_key_der: &[u8]) -> CertificateResult<Vec<u8>> {
-        let certificate = self.build_certificate(private_key_der)?;
-        Ok(certificate.serialize_der().map_err(|_err| CertificateError::GeneratingCertificate)?)
-    }
-
-    fn build_certificate(&self, private_key_der: &[u8]) -> CertificateResult<Certificate> {
-        let mut params = CertificateParams::default();
-        params.alg = &rcgen::PKCS_ED25519;
-        params.not_before = Utc::today().and_hms(0, 0, 0);
-        params.not_after = (Utc::today() + Duration::days(7)).and_hms(0, 0, 0);
-        params.key_pair = Some(KeyPair::from_der(private_key_der).map_err(|_err| CertificateError::ParseDer)?);
-        params.distinguished_name = {
-            let mut name = DistinguishedName::new();
-            //name.push(DnType::CommonName, "globalvpn self signed node cert");
-            name
-        };
-
-        if let Some(ipv4_endpoint) = self.ipv4_endpoint {
-            params.custom_extensions.push(
-                CustomExtension::from_oid_content(
-                    OID_IPV4_ENDPOINT,
-                    ipv4_endpoint.to_string().into_bytes()
-                )
-            );
-        }
-
-        if let Some(ipv6_endpoint) = self.ipv6_endpoint {
-            params.custom_extensions.push(
-                CustomExtension::from_oid_content(
-                    OID_IPV6_ENDPOINT,
-                    ipv6_endpoint.to_string().into_bytes()
-                )
-            );
-        }
-
-        if let Some(proxy_node) = &self.proxy_node {
-            params.custom_extensions.push(
-                CustomExtension::from_oid_content(
-                    OID_PROXY_NODE,
-                    base64::encode(proxy_node.as_slice()).into_bytes()
-                )
-            );
-        }
-
-        Ok(Certificate::from_params(params).map_err(|_err| CertificateError::GeneratingCertificate)?)
-    }
-}
-
-impl TryFrom<&HashMap<Oid<'_>, X509Extension<'_>>> for ReachabilityInformation {
-    type Error = CertificateError;
-
-    fn try_from(extensions: &HashMap<Oid<'_>, X509Extension<'_>>) -> Result<Self, Self::Error> {
-        let mut reachability_information: ReachabilityInformation = Default::default();
-
-        if let Some(extension) = extensions.get(
-            &Oid::from(OID_IPV4_ENDPOINT).expect("Invalid OID for IPv4 reachability")
-        ) {
-            let ipv4_str = std::str::from_utf8(extension.value)
-                .map_err(|_err| CertificateError::InvalidIpv4ReachabilityInformation)?;
-            reachability_information.ipv4_endpoint = Some(
-                ipv4_str.parse()
-                .map_err(|_err| CertificateError::InvalidIpv4ReachabilityInformation)?
-            );
-        }
-
-        if let Some(extension) = extensions.get(
-            &Oid::from(OID_IPV6_ENDPOINT).expect("Invalid OID for IPv6 reachability")
-        ) {
-            let ipv4_str = std::str::from_utf8(extension.value)
-                .map_err(|_err| CertificateError::InvalidIpv6ReachabilityInformation)?;
-            reachability_information.ipv6_endpoint = Some(
-                ipv4_str.parse()
-                    .map_err(|_err| CertificateError::InvalidIpv6ReachabilityInformation)?
-            );
-        }
-
-        Ok(reachability_information)
-    }
-}*/
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct CertificateData {

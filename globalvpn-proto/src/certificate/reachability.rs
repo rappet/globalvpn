@@ -126,12 +126,12 @@ impl BERDecodable for NodeProxyReachability {
                 .read_optional(|reader| {
                     reader.read_tagged(Tag::context(0), |reader| {
                         Ok(reader
-                            .collect_set_of(|reader| NodeIpReachability::decode_ber(reader))?
+                            .collect_set_of(NodeIpReachability::decode_ber)?
                             .into_iter()
                             .collect())
                     })
                 })?
-                .unwrap_or_else(|| BTreeSet::new());
+                .unwrap_or_else(BTreeSet::new);
             Ok(NodeProxyReachability {
                 proxy_address,
                 proxy_reachability,

@@ -63,8 +63,8 @@ fn main() -> anyhow::Result<()> {
         reachability,
         metadata,
     };
-    let mut rng = SystemRandom::new();
-    let private_key = ring::signature::Ed25519KeyPair::generate_pkcs8(&mut rng).unwrap();
+    let rng = SystemRandom::new();
+    let private_key = ring::signature::Ed25519KeyPair::generate_pkcs8(&rng).unwrap();
     let encoded = certificate_data.sign(private_key.as_ref())?;
 
     let _decoded: CertificateData = encoded.clone().try_into()?;
